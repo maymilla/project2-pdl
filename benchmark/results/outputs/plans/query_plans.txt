@@ -1,0 +1,225 @@
+Query execution plans
+Started: 2026-10-11T19:04:58+07:00
+Engines: both
+Queries: q1_favorit, q2_pembeli_berulang, q3_jaccard, q6_insert_pesanan, q4_tandai_terjual, q5_hapus_favorit
+PostgreSQL plans run in order inside one transaction and are rolled back afterward; Memgraph PROFILE uses single auto-commit queries, so write profiles may mutate data.
+
+PostgreSQL EXPLAIN ANALYZE q1_favorit
+Limit  (cost=94743.65..94743.67 rows=10 width=37) (actual time=724.487..724.489 rows=10 loops=1)
+  Buffers: shared hit=775812
+  ->  Sort  (cost=94743.65..95993.65 rows=500000 width=37) (actual time=724.485..724.487 rows=10 loops=1)
+        Sort Key: (count(*)) DESC, p.id_produk
+        Sort Method: top-N heapsort  Memory: 25kB
+        Buffers: shared hit=775812
+        ->  GroupAggregate  (cost=1.27..83938.83 rows=500000 width=37) (actual time=37.857..710.693 rows=149113 loops=1)
+              Group Key: p.id_produk, u.nama
+              Buffers: shared hit=775806
+              ->  Incremental Sort  (cost=1.27..75188.83 rows=500000 width=29) (actual time=23.533..653.773 rows=500000 loops=1)
+                    Sort Key: p.id_produk, u.nama
+                    Presorted Key: p.id_produk
+                    Full-sort Groups: 8701  Sort Method: quicksort  Average Memory: 28kB  Peak Memory: 28kB
+                    Pre-sorted Groups: 430  Sort Method: quicksort  Average Memory: 3239kB  Peak Memory: 3239kB
+                    Buffers: shared hit=775806
+                    ->  Nested Loop  (cost=1.16..52688.83 rows=500000 width=29) (actual time=0.084..584.751 rows=500000 loops=1)
+                          Buffers: shared hit=775803
+                          ->  Nested Loop  (cost=0.85..37142.33 rows=500000 width=20) (actual time=0.054..399.316 rows=500000 loops=1)
+                                Buffers: shared hit=597390
+                                ->  Index Only Scan using produk_favorit_id_produk_idx on produk_favorit f  (cost=0.42..11432.41 rows=500000 width=4) (actual time=0.029..40.436 rows=500000 loops=1)
+                                      Heap Fetches: 0
+                                      Buffers: shared hit=938
+                                ->  Memoize  (cost=0.43..0.50 rows=1 width=20) (actual time=0.001..0.001 rows=1 loops=500000)
+                                      Cache Key: f.id_produk
+                                      Cache Mode: logical
+                                      Hits: 350887  Misses: 149113  Evictions: 80640  Overflows: 0  Memory Usage: 8193kB
+                                      Buffers: shared hit=596452
+                                      ->  Index Scan using produk_pkey on produk p  (cost=0.42..0.49 rows=1 width=20) (actual time=0.001..0.001 rows=1 loops=149113)
+                                            Index Cond: (id_produk = f.id_produk)
+                                            Buffers: shared hit=596452
+                          ->  Memoize  (cost=0.30..0.33 rows=1 width=17) (actual time=0.000..0.000 rows=1 loops=500000)
+                                Cache Key: p.id_penjual
+                                Cache Mode: logical
+                                Hits: 440529  Misses: 59471  Evictions: 0  Overflows: 0  Memory Usage: 6903kB
+                                Buffers: shared hit=178413
+                                ->  Index Scan using pengguna_pkey on pengguna u  (cost=0.29..0.32 rows=1 width=17) (actual time=0.001..0.001 rows=1 loops=59471)
+                                      Index Cond: (id_pengguna = p.id_penjual)
+                                      Buffers: shared hit=178413
+Planning:
+  Buffers: shared hit=228 read=9 dirtied=1
+Planning Time: 3.372 ms
+Execution Time: 730.455 ms
+
+Memgraph PROFILE q1_favorit
+{"absolute_time":0.0884111065603101,"actual_hits":11,"children":[{"absolute_time":158.42846760516522,"actual_hits":10,"children":[{"absolute_time":226.11243360128728,"actual_hits":149114,"children":[{"absolute_time":615.2697982833092,"actual_hits":149114,"children":[{"absolute_time":33.621568312549655,"actual_hits":500001,"children":[{"absolute_time":12.282176730600288,"actual_hits":500001,"children":[{"absolute_time":178.47655582448806,"actual_hits":500001,"children":[{"absolute_time":27.03443549255592,"actual_hits":500001,"children":[{"absolute_time":103.04841001171431,"actual_hits":500001,"children":[{"absolute_time":42.70389415564273,"actual_hits":100001,"children":[{"absolute_time":16.144835406606017,"actual_hits":800001,"children":[{"absolute_time":7.346952101709799e-05,"actual_hits":2,"children":[],"name":"Once","relative_time":5.1987649330382395e-08}],"name":"ScanAll (penjual)","relative_time":0.01142422095578987}],"name":"Filter (penjual :Pengguna)","relative_time":0.030217633702670516}],"name":"Expand (penjual)-[anon3:MENJUAL]->(p)","relative_time":0.0729179192892209}],"name":"Filter (p :Produk)","relative_time":0.01912979331803129}],"name":"Expand (p)<-[anon2:MENYUKAI]-(anon1)","relative_time":0.1262915079538707}],"name":"EdgeUniquenessFilter","relative_time":0.008690971276859584}],"name":"Filter (anon1 :Pengguna)","relative_time":0.023790903754000944}],"name":"Aggregate {COUNT-1} {penjual, p}","relative_time":0.43537007011770007}],"name":"Produce {id_produk, nama_produk, penjual, jumlah_favorit}","relative_time":0.1599990546361046}],"name":"OrderBy {id_produk, nama_produk, penjual, jumlah_favorit}","relative_time":0.11210531256751219}],"name":"Limit","relative_time":6.256044059003479e-05}
+
+PostgreSQL EXPLAIN ANALYZE q2_pembeli_berulang
+Limit  (cost=6189.65..6189.67 rows=10 width=16) (actual time=80.467..80.470 rows=10 loops=1)
+  Buffers: shared hit=1336 read=56, temp read=204 written=366
+  ->  Sort  (cost=6189.65..6242.21 rows=21027 width=16) (actual time=80.465..80.467 rows=10 loops=1)
+        Sort Key: (count(*)) DESC, id_pembeli, id_penjual
+        Sort Method: top-N heapsort  Memory: 25kB
+        Buffers: shared hit=1336 read=56, temp read=204 written=366
+        ->  HashAggregate  (cost=4946.75..5735.26 rows=21027 width=16) (actual time=57.630..79.490 rows=15813 loops=1)
+              Group Key: id_pembeli, id_penjual
+              Filter: (count(*) > 1)
+              Batches: 5  Memory Usage: 8241kB  Disk Usage: 1744kB
+              Rows Removed by Filter: 103872
+              Buffers: shared hit=1336 read=56, temp read=204 written=366
+              ->  Seq Scan on pesanan ps  (cost=0.00..3892.00 rows=140633 width=8) (actual time=0.014..21.216 rows=140060 loops=1)
+                    Filter: ((status_pesanan)::text = 'selesai'::text)
+                    Rows Removed by Filter: 59940
+                    Buffers: shared hit=1336 read=56
+Planning:
+  Buffers: shared hit=64
+Planning Time: 0.378 ms
+Execution Time: 81.431 ms
+
+Memgraph PROFILE q2_pembeli_berulang
+{"absolute_time":0.022802928528823378,"actual_hits":11,"children":[{"absolute_time":21.887745134326074,"actual_hits":10,"children":[{"absolute_time":14.373982872985911,"actual_hits":15814,"children":[{"absolute_time":7.333596083143717,"actual_hits":15814,"children":[{"absolute_time":40.68738465117899,"actual_hits":119686,"children":[{"absolute_time":352.09397317829587,"actual_hits":119686,"children":[{"absolute_time":17.549479215427688,"actual_hits":181331,"children":[{"absolute_time":5.482729256020059,"actual_hits":181331,"children":[{"absolute_time":140.57138660685578,"actual_hits":181331,"children":[{"absolute_time":19.132314368265803,"actual_hits":181331,"children":[{"absolute_time":4.792670861105621,"actual_hits":181331,"children":[{"absolute_time":104.4582321826995,"actual_hits":181331,"children":[{"absolute_time":13.748403461200528,"actual_hits":140061,"children":[{"absolute_time":50.3665070278415,"actual_hits":140061,"children":[{"absolute_time":63.78251643719572,"actual_hits":140061,"children":[{"absolute_time":3.673492843131008e-05,"actual_hits":2,"children":[],"name":"Once","relative_time":4.2900414680770855e-08}],"name":"ScanAllByLabelPropertyValue (o :Pesanan {status_pesanan})","relative_time":0.07448759318138665}],"name":"Expand (o)<-[anon1:MEMBUAT]-(b)","relative_time":0.05881987878530082}],"name":"Filter (b :Pengguna)","relative_time":0.01605589652330278}],"name":"Expand (o)-[anon2:BERISI]->(anon3)","relative_time":0.12199020574757753}],"name":"EdgeUniquenessFilter","relative_time":0.005597059151873395}],"name":"Filter (anon3 :Produk)","relative_time":0.022343427774365796}],"name":"Expand (anon3)<-[anon4:MENJUAL]-(s)","relative_time":0.16416448963447736}],"name":"EdgeUniquenessFilter","relative_time":0.006402934991569995}],"name":"Filter (s :Pengguna)","relative_time":0.020494934056594458}],"name":"Aggregate {COUNT-1} {s, b}","relative_time":0.41118842749873874}],"name":"Produce {b, s, jumlah_pesanan}","relative_time":0.047516239947914866}],"name":"Filter Generic {jumlah_pesanan}","relative_time":0.008564446060006172}],"name":"Produce {id_pembeli, id_penjual, jumlah_pesanan}","relative_time":0.016786471410130958}],"name":"OrderBy {id_pembeli, id_penjual, jumlah_pesanan}","relative_time":0.02556132222893583}],"name":"Limit","relative_time":2.663010740994699e-05}
+
+PostgreSQL EXPLAIN ANALYZE q3_jaccard
+Limit  (cost=13929.37..13929.40 rows=10 width=12) (actual time=239.402..239.417 rows=10 loops=1)
+  Buffers: shared hit=1395, temp read=602 written=407
+  CTE up
+    ->  HashAggregate  (cost=4595.16..5225.98 rows=63081 width=8) (actual time=65.753..93.336 rows=119685 loops=1)
+          Group Key: ps.id_pembeli, ps.id_penjual
+          Batches: 5  Memory Usage: 10289kB  Disk Usage: 728kB
+          Buffers: shared hit=1392, temp read=76 written=144
+          ->  Seq Scan on pesanan ps  (cost=0.00..3892.00 rows=140633 width=8) (actual time=0.012..18.442 rows=140060 loops=1)
+                Filter: ((status_pesanan)::text = 'selesai'::text)
+                Rows Removed by Filter: 59940
+                Buffers: shared hit=1392
+  CTE sizes
+    ->  HashAggregate  (cost=1577.03..1579.03 rows=200 width=12) (actual time=154.644..169.178 rows=72585 loops=1)
+          Group Key: up.id_pengguna
+          Batches: 1  Memory Usage: 7713kB
+          Buffers: shared hit=1392, temp read=76 written=406
+          ->  CTE Scan on up  (cost=0.00..1261.62 rows=63081 width=4) (actual time=65.755..117.410 rows=119685 loops=1)
+                Buffers: shared hit=1392, temp read=76 written=406
+  ->  Sort  (cost=7124.37..7124.87 rows=200 width=12) (actual time=239.400..239.408 rows=10 loops=1)
+        Sort Key: ((((count(*)))::double precision / (((sizes.n + s2.n) - (count(*))))::double precision)) DESC, o.id_pengguna
+        Sort Method: top-N heapsort  Memory: 25kB
+        Buffers: shared hit=1395, temp read=602 written=407
+        ->  Nested Loop  (cost=7106.52..7120.05 rows=200 width=12) (actual time=208.309..236.886 rows=37190 loops=1)
+              Buffers: shared hit=1392, temp read=602 written=407
+              ->  CTE Scan on sizes  (cost=0.00..4.50 rows=1 width=8) (actual time=169.635..170.820 rows=1 loops=1)
+                    Filter: (id_pengguna = 54928)
+                    Rows Removed by Filter: 72584
+                    Buffers: shared hit=1392, temp read=76 written=406
+              ->  Hash Join  (cost=7106.52..7111.05 rows=200 width=20) (actual time=38.624..63.043 rows=37190 loops=1)
+                    Hash Cond: (s2.id_pengguna = o.id_pengguna)
+                    Buffers: temp read=526 written=1
+                    ->  CTE Scan on sizes s2  (cost=0.00..4.00 rows=200 width=12) (actual time=0.001..12.522 rows=72585 loops=1)
+                    ->  Hash  (cost=7104.02..7104.02 rows=200 width=12) (actual time=38.513..38.519 rows=37190 loops=1)
+                          Buckets: 65536 (originally 1024)  Batches: 1 (originally 1)  Memory Usage: 2256kB
+                          Buffers: temp read=526 written=1
+                          ->  HashAggregate  (cost=7102.02..7104.02 rows=200 width=12) (actual time=28.105..33.828 rows=37190 loops=1)
+                                Group Key: o.id_pengguna
+                                Batches: 1  Memory Usage: 4129kB
+                                Buffers: temp read=526 written=1
+                                ->  Hash Join  (cost=1423.26..6607.74 rows=98856 width=4) (actual time=5.309..19.809 rows=37192 loops=1)
+                                      Hash Cond: (o.id_penjual = m.id_penjual)
+                                      Join Filter: (o.id_pengguna <> m.id_pengguna)
+                                      Rows Removed by Join Filter: 3
+                                      Buffers: temp read=526 written=1
+                                      ->  CTE Scan on up o  (cost=0.00..1261.62 rows=63081 width=8) (actual time=0.062..6.215 rows=119685 loops=1)
+                                            Buffers: temp read=264 written=1
+                                      ->  Hash  (cost=1419.32..1419.32 rows=315 width=8) (actual time=5.231..5.233 rows=3 loops=1)
+                                            Buckets: 1024  Batches: 1  Memory Usage: 9kB
+                                            Buffers: temp read=262
+                                            ->  CTE Scan on up m  (cost=0.00..1419.32 rows=315 width=8) (actual time=2.645..5.227 rows=3 loops=1)
+                                                  Filter: (id_pengguna = 54928)
+                                                  Rows Removed by Filter: 119682
+                                                  Buffers: temp read=262
+Planning:
+  Buffers: shared hit=10
+Planning Time: 0.479 ms
+Execution Time: 241.296 ms
+
+Memgraph PROFILE q3_jaccard
+{"absolute_time":0.0057306272489245315,"actual_hits":11,"children":[{"absolute_time":40.760601896359454,"actual_hits":10,"children":[{"absolute_time":29.55288340555091,"actual_hits":37191,"children":[{"absolute_time":13.836655429594959,"actual_hits":37191,"children":[{"absolute_time":132.53315924548912,"actual_hits":37191,"children":[{"absolute_time":6.776073214329464,"actual_hits":118484,"children":[{"absolute_time":3.5177070765403093,"actual_hits":118484,"children":[{"absolute_time":85.23447687294468,"actual_hits":118484,"children":[{"absolute_time":7.484149650787634,"actual_hits":118484,"children":[{"absolute_time":2.3553673913531066,"actual_hits":118484,"children":[{"absolute_time":38.03153454698687,"actual_hits":118484,"children":[{"absolute_time":80.31247363356674,"actual_hits":86143,"children":[{"absolute_time":34.75899128488041,"actual_hits":112371,"children":[{"absolute_time":15.55800873053478,"actual_hits":37191,"children":[{"absolute_time":182.54570299067333,"actual_hits":37191,"children":[{"absolute_time":65.45875153364922,"actual_hits":81153,"children":[{"absolute_time":6.5267825801853245,"actual_hits":181317,"children":[{"absolute_time":137.31447463970684,"actual_hits":181317,"children":[{"absolute_time":22.85529907946823,"actual_hits":181317,"children":[{"absolute_time":5.55642753494688,"actual_hits":181317,"children":[{"absolute_time":63.09023447892495,"actual_hits":181317,"children":[{"absolute_time":57.537536916638196,"actual_hits":140051,"children":[{"absolute_time":47.80317265444849,"actual_hits":140061,"children":[{"absolute_time":59.58362270045124,"actual_hits":140061,"children":[{"absolute_time":0.003159191944919934,"actual_hits":2,"children":[{"absolute_time":0.038874591578040935,"actual_hits":2,"children":[{"absolute_time":0.0007071447086012643,"actual_hits":15,"children":[{"absolute_time":0.0007441577925225426,"actual_hits":15,"children":[{"absolute_time":0.013628050523496226,"actual_hits":15,"children":[{"absolute_time":0.0006606696333016141,"actual_hits":15,"children":[{"absolute_time":0.0006715230940003348,"actual_hits":15,"children":[{"absolute_time":0.006510963243776143,"actual_hits":15,"children":[{"absolute_time":0.01493269215825527,"actual_hits":11,"children":[{"absolute_time":0.0038204181659496875,"actual_hits":11,"children":[{"absolute_time":0.012563019905701248,"actual_hits":2,"children":[{"absolute_time":9.461991378371895e-06,"actual_hits":2,"children":[],"name":"Once","relative_time":8.306651602869964e-09}],"name":"ScanAllByLabelPropertyValue (me :Pengguna {id_pengguna})","relative_time":1.1029034509069375e-05}],"name":"Expand (me)-[anon1:MEMBUAT]->(anon2)","relative_time":3.3539327412999664e-06}],"name":"Filter (anon2 :Pesanan), {anon2.status_pesanan}","relative_time":1.3109362109023426e-05}],"name":"Expand (anon2)-[anon3:BERISI]->(anon4)","relative_time":5.715953555904284e-06}],"name":"EdgeUniquenessFilter","relative_time":5.8952795052133e-07}],"name":"Filter (anon4 :Produk)","relative_time":5.799997325062733e-07}],"name":"Expand (anon4)<-[anon5:MENJUAL]-(s)","relative_time":1.1964021440957121e-05}],"name":"EdgeUniquenessFilter","relative_time":6.532937172374788e-07}],"name":"Filter (s :Pengguna)","relative_time":6.208000506733111e-07}],"name":"Aggregate {COLLECT-1} {me}","relative_time":3.4127878110391245e-05}],"name":"Produce {me, penjual_me}","relative_time":2.773444382228818e-06}],"name":"ScanAllByLabelPropertyValue (anon8 :Pesanan {status_pesanan})","relative_time":0.05230826949819793}],"name":"Expand (anon8)<-[anon7:MEMBUAT]-(other)","relative_time":0.04196625053580102}],"name":"Filter (other :Pengguna), Generic {me, other}","relative_time":0.05051201741171119}],"name":"Expand (anon8)-[anon9:BERISI]->(anon10)","relative_time":0.05538671262771528}],"name":"EdgeUniquenessFilter","relative_time":0.004877969746928595}],"name":"Filter (anon10 :Produk)","relative_time":0.0200645930798982}],"name":"Expand (anon10)<-[anon11:MENJUAL]-(s2)","relative_time":0.12054793280306628}],"name":"EdgeUniquenessFilter","relative_time":0.005729841300131153}],"name":"Filter (s2 :Pengguna), Generic {penjual_me, s2}","relative_time":0.05746602608323394}],"name":"Aggregate {COUNT-1} {other, penjual_me}","relative_time":0.16025628176015258}],"name":"Produce {penjual_me, other, sama}","relative_time":0.01365832550369527}],"name":"Expand (other)-[anon13:MEMBUAT]->(anon14)","relative_time":0.030514805935109215}],"name":"Filter (anon14 :Pesanan), {anon14.status_pesanan}","relative_time":0.07050606063366653}],"name":"Expand (anon14)-[anon15:BERISI]->(anon16)","relative_time":0.03338776107178103}],"name":"EdgeUniquenessFilter","relative_time":0.0020677694086102066}],"name":"Filter (anon16 :Produk)","relative_time":0.00657031075244236}],"name":"Expand (anon16)<-[anon17:MENJUAL]-(s3)","relative_time":0.07482707134512895}],"name":"EdgeUniquenessFilter","relative_time":0.0030881836557748437}],"name":"Filter (s3 :Pengguna)","relative_time":0.005948692740899449}],"name":"Aggregate {COUNT-1} {sama, other, penjual_me}","relative_time":0.11635043149546738}],"name":"Produce {penjual_me, other, sama, n_other}","relative_time":0.012147155012772923}],"name":"Produce {id_pengguna, jaccard}","relative_time":0.025944380679872148}],"name":"OrderBy {id_pengguna, jaccard}","relative_time":0.03578360046388017}],"name":"Limit","relative_time":5.030899111949949e-06}
+
+PostgreSQL EXPLAIN ANALYZE q6_insert_pesanan
+Insert on detail_pesanan  (cost=0.43..8.50 rows=0 width=0) (actual time=1.135..1.137 rows=0 loops=1)
+  Buffers: shared hit=81 read=12 dirtied=8
+  CTE pes
+    ->  Insert on pesanan  (cost=0.00..0.01 rows=1 width=94) (actual time=0.535..0.535 rows=1 loops=1)
+          Buffers: shared hit=14 read=8 dirtied=4
+          ->  Result  (cost=0.00..0.01 rows=1 width=94) (actual time=0.290..0.290 rows=1 loops=1)
+  ->  Subquery Scan on "*SELECT*"  (cost=0.42..8.49 rows=1 width=20) (actual time=0.858..0.862 rows=1 loops=1)
+        Buffers: shared hit=21 read=8 dirtied=4
+        ->  WindowAgg  (cost=0.42..8.49 rows=1 width=24) (actual time=0.857..0.860 rows=1 loops=1)
+              Buffers: shared hit=21 read=8 dirtied=4
+              ->  Nested Loop  (cost=0.42..8.47 rows=1 width=12) (actual time=0.798..0.800 rows=1 loops=1)
+                    Buffers: shared hit=21 read=8 dirtied=4
+                    ->  Index Scan using produk_pkey on produk p  (cost=0.42..8.45 rows=1 width=8) (actual time=0.260..0.261 rows=1 loops=1)
+                          Index Cond: (id_produk = ANY ('{1}'::smallint[]))
+                          Filter: ((id_penjual = '1'::smallint) AND ((status_produk)::text = 'tersedia'::text))
+                          Buffers: shared hit=7
+                    ->  CTE Scan on pes  (cost=0.00..0.02 rows=1 width=4) (actual time=0.536..0.537 rows=1 loops=1)
+                          Buffers: shared hit=14 read=8 dirtied=4
+Planning:
+  Buffers: shared hit=45
+Planning Time: 0.386 ms
+Trigger for constraint pesanan_id_pembeli_fkey on pesanan: time=0.229 calls=1
+Trigger for constraint pesanan_id_penjual_fkey on pesanan: time=0.038 calls=1
+Trigger for constraint detail_pesanan_id_pesanan_fkey on detail_pesanan: time=0.042 calls=1
+Trigger for constraint detail_pesanan_id_produk_fkey on detail_pesanan: time=0.031 calls=1
+Execution Time: 1.648 ms
+
+Memgraph PROFILE q6_insert_pesanan
+{"absolute_time":0.0013556978997538364,"actual_hits":2,"children":[{"absolute_time":0.001959262033205887,"actual_hits":2,"children":[{"absolute_time":0.03383673388152726,"actual_hits":2,"children":[{"absolute_time":0.003194247106269313,"actual_hits":2,"children":[{"absolute_time":0.0060727837427329385,"actual_hits":2,"children":[{"absolute_time":0.05408863195935683,"actual_hits":2,"children":[{"absolute_time":0.029333216885769654,"actual_hits":2,"children":[{"absolute_time":0.0008635609909390876,"actual_hits":2,"children":[{"absolute_time":0.0019221196249934532,"actual_hits":2,"children":[{"absolute_time":0.11596788404127167,"actual_hits":2,"children":[{"absolute_time":0.0022656869009584665,"actual_hits":2,"children":[{"absolute_time":0.0014856963284973549,"actual_hits":2,"children":[{"absolute_time":0.04142307075891688,"actual_hits":2,"children":[{"absolute_time":0.018413348871314093,"actual_hits":2,"children":[{"absolute_time":0.0022842581050646835,"actual_hits":2,"children":[{"absolute_time":0.008895606766877914,"actual_hits":2,"children":[{"absolute_time":0.0027671094118263237,"actual_hits":3,"children":[{"absolute_time":0.000594278531398942,"actual_hits":2,"children":[{"absolute_time":0.0023492573194364426,"actual_hits":2,"children":[{"absolute_time":0.015553383438956686,"actual_hits":2,"children":[{"absolute_time":0.008747037134028178,"actual_hits":2,"children":[{"absolute_time":2.7856806159325407e-05,"actual_hits":2,"children":[],"name":"Once","relative_time":7.85628240716493e-05}],"name":"ScanAllByLabelPropertyValue (s :Pengguna {id_pengguna})","relative_time":0.024668726758497878},{"absolute_time":0.0011421290525323417,"actual_hits":2,"children":[{"absolute_time":3.714240821243388e-05,"actual_hits":2,"children":[],"name":"Once","relative_time":0.0001047504320955324}],"name":"ScanAllByLabelPropertyValue (b :Pengguna {id_pengguna})","relative_time":0.0032210757869376213}],"name":"Cartesian","relative_time":0.04386424344000419}],"name":"Produce {b, s, ids}","relative_time":0.006625464830042424}],"name":"Unwind","relative_time":0.0016760069135285183}],"name":"Expand (s)-[anon3:MENJUAL]->(p)","relative_time":0.0078039071911171634}],"name":"Filter (p :Produk), {p.id_produk}, {p.status_produk}","relative_time":0.02508772848688001}],"name":"Produce {b, s, ids, p}","relative_time":0.006442151573875243}],"name":"OrderBy {b, s, ids, p}","relative_time":0.05193002671136018}],"name":"Aggregate {COLLECT-1, COUNT-1} {ids, s, b}","relative_time":0.11682291939454251}],"name":"Produce {b, s, ids, products, unique_products}","relative_time":0.004190017283821295}],"name":"Filter Generic {ids, products}, Generic {ids, unique_products}","relative_time":0.006389776357827476}],"name":"CreateExpand (b)-[anon5:MEMBUAT]->(o)","relative_time":0.327057036610276}],"name":"Accumulate","relative_time":0.005420834860943802}],"name":"Produce {o, products}","relative_time":0.002435447546221128}],"name":"Unwind","relative_time":0.08272665374744671}],"name":"Produce {o, p, i}","relative_time":0.15254281673911904}],"name":"CreateExpand (o)-[anon7:BERISI]->(p)","relative_time":0.017126695647619546}],"name":"Accumulate","relative_time":0.009008537160215786}],"name":"Aggregate {COUNT-1} {o}","relative_time":0.09542764363903002}],"name":"Produce {o, detail_rows}","relative_time":0.005525585293039334}],"name":"Produce {id_pesanan, detail_rows}","relative_time":0.0038233907714869324}
+
+PostgreSQL EXPLAIN ANALYZE q4_tandai_terjual
+Update on produk  (cost=16628.19..34941.28 rows=0 width=0) (actual time=2286.507..2286.514 rows=0 loops=1)
+  Buffers: shared hit=1862774 read=593 dirtied=3564 written=3960, temp read=2182 written=2182
+  ->  Hash Semi Join  (cost=16628.19..34941.28 rows=164188 width=76) (actual time=184.969..533.250 rows=181330 loops=1)
+        Hash Cond: (produk.id_produk = d.id_produk)
+        Buffers: shared hit=7115 read=285, temp read=2182 written=2182
+        ->  Seq Scan on produk  (cost=0.00..9488.00 rows=500000 width=10) (actual time=0.082..47.555 rows=500000 loops=1)
+              Buffers: shared hit=4488
+        ->  Hash  (cost=13773.84..13773.84 rows=164188 width=16) (actual time=184.758..184.762 rows=181330 loops=1)
+              Buckets: 262144  Batches: 2  Memory Usage: 6472kB
+              Buffers: shared hit=2627 read=285, temp read=785 written=1205
+              ->  Hash Join  (cost=6336.91..13773.84 rows=164188 width=16) (actual time=37.710..147.884 rows=181330 loops=1)
+                    Hash Cond: (d.id_pesanan = p.id_pesanan)
+                    Buffers: shared hit=2627 read=285, temp read=785 written=785
+                    ->  Seq Scan on detail_pesanan d  (cost=0.00..3854.98 rows=233498 width=14) (actual time=0.008..24.756 rows=233499 loops=1)
+                          Buffers: shared hit=1235 read=285
+                    ->  Hash  (cost=3892.00..3892.00 rows=140633 width=10) (actual time=37.578..37.580 rows=140060 loops=1)
+                          Buckets: 262144  Batches: 2  Memory Usage: 5062kB
+                          Buffers: shared hit=1392, temp written=273
+                          ->  Seq Scan on pesanan p  (cost=0.00..3892.00 rows=140633 width=10) (actual time=0.007..15.670 rows=140060 loops=1)
+                                Filter: ((status_pesanan)::text = 'selesai'::text)
+                                Rows Removed by Filter: 59941
+                                Buffers: shared hit=1392
+Planning:
+  Buffers: shared hit=44 read=4
+Planning Time: 0.366 ms
+Execution Time: 2287.105 ms
+
+Memgraph PROFILE q4_tandai_terjual
+{"absolute_time":0.0072827479182090635,"actual_hits":2,"children":[{"absolute_time":9.650020866704711,"actual_hits":2,"children":[{"absolute_time":45.37466623191028,"actual_hits":181331,"children":[{"absolute_time":456.6708346361788,"actual_hits":181331,"children":[{"absolute_time":90.44457329956103,"actual_hits":181331,"children":[{"absolute_time":68.71335054963893,"actual_hits":181331,"children":[{"absolute_time":13.915293861115947,"actual_hits":181331,"children":[{"absolute_time":77.70716657992351,"actual_hits":181331,"children":[{"absolute_time":61.088159859462394,"actual_hits":140061,"children":[{"absolute_time":1.8367586174549972e-05,"actual_hits":2,"children":[],"name":"Once","relative_time":2.2302361289534694e-08}],"name":"ScanAllByLabelPropertyValue (anon1 :Pesanan {status_pesanan})","relative_time":0.07417470095152348}],"name":"Expand (anon1)-[anon2:BERISI]->(p)","relative_time":0.09435389535576642}],"name":"Filter (p :Produk)","relative_time":0.016896281753704955}],"name":"Produce {p}","relative_time":0.083433389385475}],"name":"Distinct","relative_time":0.10981995844394263}],"name":"SetProperty","relative_time":0.554500621239032}],"name":"Accumulate","relative_time":0.05509500214558853}],"name":"Aggregate {COUNT-1} {}","relative_time":0.011717285536354387}],"name":"Produce {affected_rows}","relative_time":8.842886251300506e-06}
+
+PostgreSQL EXPLAIN ANALYZE q5_hapus_favorit
+Delete on produk_favorit f  (cost=4.56..14418.19 rows=0 width=0) (actual time=1137.911..1137.913 rows=0 loops=1)
+  Buffers: shared hit=1232993 read=20 dirtied=1
+  ->  Nested Loop  (cost=4.56..14418.19 rows=1 width=12) (actual time=2.027..660.532 rows=386177 loops=1)
+        Buffers: shared hit=844603 read=20
+        ->  Seq Scan on produk p  (cost=0.00..14346.05 rows=1 width=10) (actual time=0.027..47.598 rows=181330 loops=1)
+              Filter: ((status_produk)::text = 'terjual'::text)
+              Rows Removed by Filter: 318670
+              Buffers: shared hit=5996
+        ->  Bitmap Heap Scan on produk_favorit f  (cost=4.56..71.96 rows=18 width=10) (actual time=0.002..0.003 rows=2 loops=181330)
+              Recheck Cond: (id_produk = p.id_produk)
+              Heap Blocks: exact=294553
+              Buffers: shared hit=838607 read=20
+              ->  Bitmap Index Scan on produk_favorit_id_produk_idx  (cost=0.00..4.56 rows=18 width=0) (actual time=0.001..0.001 rows=2 loops=181330)
+                    Index Cond: (id_produk = p.id_produk)
+                    Buffers: shared hit=544055 read=19
+Planning:
+  Buffers: shared hit=17 read=1
+Planning Time: 0.235 ms
+Execution Time: 1137.979 ms
+
+Memgraph PROFILE q5_hapus_favorit
+{"absolute_time":0.004841980470162749,"actual_hits":2,"children":[{"absolute_time":0.002151991320072333,"actual_hits":2,"children":[{"absolute_time":0.0010242650994575046,"actual_hits":1,"children":[{"absolute_time":0.005173056057866185,"actual_hits":1,"children":[{"absolute_time":0.0034556014466546113,"actual_hits":1,"children":[{"absolute_time":0.002555489692585895,"actual_hits":1,"children":[{"absolute_time":0.0020899146473779386,"actual_hits":1,"children":[{"absolute_time":0.007283662929475588,"actual_hits":1,"children":[{"absolute_time":3.103833634719711e-05,"actual_hits":2,"children":[],"name":"Once","relative_time":0.00108499095840868}],"name":"ScanAllByLabelPropertyValue (anon2 :Produk {status_produk})","relative_time":0.2546112115732369}],"name":"Expand (anon2)<-[f:MENYUKAI]-(anon1)","relative_time":0.07305605786618445}],"name":"Filter (anon1 :Pengguna)","relative_time":0.08933092224231465}],"name":"Produce {f}","relative_time":0.12079566003616636}],"name":"Delete","relative_time":0.18083182640144665}],"name":"Accumulate","relative_time":0.03580470162748644}],"name":"Aggregate {COUNT-1} {}","relative_time":0.07522603978300181}],"name":"Produce {affected_rows}","relative_time":0.16925858951175407}

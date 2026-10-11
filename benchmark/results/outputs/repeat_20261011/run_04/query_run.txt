@@ -1,0 +1,131 @@
+Query run results
+Started: 2026-10-11T19:16:58+07:00
+Engines: both
+Queries: q1_favorit, q2_pembeli_berulang, q3_jaccard, q6_insert_pesanan, q4_tandai_terjual, q5_hapus_favorit
+Execution order: paired by query (Memgraph then PostgreSQL)
+
+Memgraph q1_favorit: 10 row(s), 5502.19 ms
+CSV: benchmark\results\outputs\repeat_20261011\run_04\q1_favorit_memgraph.csv
+id_produk | nama_produk      | penjual          | jumlah_favorit
+----------+------------------+------------------+---------------
+1         | Celana Minimal   | Budi Saputra     | 36750         
+2         | Syal Santai      | Budi Saputra     | 19003         
+3         | Jeans Premium    | Ayu Purnama      | 12582         
+4         | Kacamata Premium | Budi Lestari     | 9631          
+5         | Hoodie Santai    | Ayu Hidayat      | 7379          
+6         | Hoodie Minimal   | Dewi Wijaya      | 6110          
+7         | Sepatu Minimal   | Dewi Wijaya      | 5313          
+8         | Jaket Casual     | Indra Siregar    | 4528          
+9         | Sandal Urban     | Indra Suryadi    | 4039          
+10        | Tunik Urban      | Kartika Ramadhan | 3563          
+
+PostgreSQL q1_favorit: 10 row(s), 2498.78 ms
+CSV: benchmark\results\outputs\repeat_20261011\run_04\q1_favorit_postgres.csv
+id_produk | nama_produk      | penjual          | jumlah_favorit
+----------+------------------+------------------+---------------
+1         | Celana Minimal   | Budi Saputra     | 36750         
+2         | Syal Santai      | Budi Saputra     | 19003         
+3         | Jeans Premium    | Ayu Purnama      | 12582         
+4         | Kacamata Premium | Budi Lestari     | 9631          
+5         | Hoodie Santai    | Ayu Hidayat      | 7379          
+6         | Hoodie Minimal   | Dewi Wijaya      | 6110          
+7         | Sepatu Minimal   | Dewi Wijaya      | 5313          
+8         | Jaket Casual     | Indra Siregar    | 4528          
+9         | Sandal Urban     | Indra Suryadi    | 4039          
+10        | Tunik Urban      | Kartika Ramadhan | 3563          
+
+Memgraph q2_pembeli_berulang: 10 row(s), 1265.76 ms
+CSV: benchmark\results\outputs\repeat_20261011\run_04\q2_pembeli_berulang_memgraph.csv
+id_pembeli | id_penjual | jumlah_pesanan
+-----------+------------+---------------
+54928      | 80000      | 8             
+3743       | 80000      | 7             
+15566      | 80000      | 7             
+92166      | 80000      | 7             
+7204       | 80000      | 6             
+8021       | 80000      | 6             
+9995       | 80000      | 6             
+13822      | 80000      | 6             
+14095      | 80000      | 6             
+15029      | 80000      | 6             
+
+PostgreSQL q2_pembeli_berulang: 10 row(s), 480.90 ms
+CSV: benchmark\results\outputs\repeat_20261011\run_04\q2_pembeli_berulang_postgres.csv
+id_pembeli | id_penjual | jumlah_pesanan
+-----------+------------+---------------
+54928      | 80000      | 8             
+3743       | 80000      | 7             
+15566      | 80000      | 7             
+92166      | 80000      | 7             
+7204       | 80000      | 6             
+8021       | 80000      | 6             
+9995       | 80000      | 6             
+13822      | 80000      | 6             
+14095      | 80000      | 6             
+15029      | 80000      | 6             
+
+Memgraph q3_jaccard: 10 row(s), 2327.56 ms
+CSV: benchmark\results\outputs\repeat_20261011\run_04\q3_jaccard_memgraph.csv
+id_pengguna | jaccard           
+------------+-------------------
+40408       | 0.6666666666666666
+42428       | 0.4               
+2           | 0.3333333333333333
+18          | 0.3333333333333333
+19          | 0.3333333333333333
+32          | 0.3333333333333333
+35          | 0.3333333333333333
+49          | 0.3333333333333333
+50          | 0.3333333333333333
+54          | 0.3333333333333333
+
+PostgreSQL q3_jaccard: 10 row(s), 313.72 ms
+CSV: benchmark\results\outputs\repeat_20261011\run_04\q3_jaccard_postgres.csv
+id_pengguna | jaccard           
+------------+-------------------
+40408       | 0.6666666666666666
+42428       | 0.4               
+2           | 0.3333333333333333
+18          | 0.3333333333333333
+19          | 0.3333333333333333
+32          | 0.3333333333333333
+35          | 0.3333333333333333
+49          | 0.3333333333333333
+50          | 0.3333333333333333
+54          | 0.3333333333333333
+
+Memgraph q6_insert_pesanan: 1 row(s), 155.73 ms
+CSV: benchmark\results\outputs\repeat_20261011\run_04\q6_insert_pesanan_memgraph.csv
+id_pesanan | detail_rows
+-----------+------------
+2000001    | 1          
+
+PostgreSQL q6_insert_pesanan: 1 row(s), 69.47 ms
+CSV: benchmark\results\outputs\repeat_20261011\run_04\q6_insert_pesanan_postgres.csv
+id_pesanan | detail_rows
+-----------+------------
+2000001    | 1          
+
+Memgraph q4_tandai_terjual: 1 row(s), 1994.87 ms
+CSV: benchmark\results\outputs\repeat_20261011\run_04\q4_tandai_terjual_memgraph.csv
+affected_rows
+-------------
+181330       
+
+PostgreSQL q4_tandai_terjual: 1 row(s), 6839.11 ms
+CSV: benchmark\results\outputs\repeat_20261011\run_04\q4_tandai_terjual_postgres.csv
+affected_rows
+-------------
+181330       
+
+Memgraph q5_hapus_favorit: 1 row(s), 3731.82 ms
+CSV: benchmark\results\outputs\repeat_20261011\run_04\q5_hapus_favorit_memgraph.csv
+affected_rows
+-------------
+386177       
+
+PostgreSQL q5_hapus_favorit: 1 row(s), 1397.80 ms
+CSV: benchmark\results\outputs\repeat_20261011\run_04\q5_hapus_favorit_postgres.csv
+affected_rows
+-------------
+386177
