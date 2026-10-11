@@ -44,6 +44,8 @@ Implementasi lingkungan PostgreSQL + Memgraph sesuai kebutuhan proyek.
 - `memgraph/load.py`: load node + relationship ke Memgraph
 - `validation/validate.py`: validasi hasil final
 - `scripts/up.sh`, `reset.sh`, `seed.sh`: alur operasional
+- `postgres/queries/`, `memgraph/queries/`: query berpasangan Q1–Q6
+- `benchmark/run_queries.py`: menjalankan query dan menyimpan hasil CSV serta laporan waktu
 
 ## Perintah lengkap
 
@@ -67,6 +69,54 @@ python memgraph/load.py --csv-dir data/out/dev
 python validation/validate.py --profile dev
 ```
 
+## Menjalankan query
+
+Setelah kedua database di-seed, jalankan semua query dan simpan hasil ke
+`benchmark/results/outputs/`. CSV hasil query disertai file `query_run.txt`
+yang berisi tabel hasil dan durasi tiap query. Gunakan `--output-dir` berbeda
+untuk setiap percobaan agar hasil tidak tertimpa:
+
+```bash
+python benchmark/run_queries.py
+```
+
+Runner menerima `--engine postgres|memgraph|both` dan `--query` yang diikuti
+nama file query tanpa ekstensi. Contoh:
+
+```bash
+python benchmark/run_queries.py --engine postgres --query q1_favorit q3_jaccard
+```
+
+Nilai parameter di header bisa diubah saat dijalankan, misalnya:
+
+```bash
+python benchmark/run_queries.py --query q3_jaccard --param id=54928
+```
+
+Q6 dijalankan sebelum Q4 dan Q5 karena memerlukan produk berstatus tersedia.
+Q4 dan Q5 mengubah data, sedangkan Q6 memakai ID pesanan tetap; load ulang
+kedua database sebelum setiap percobaan. Urutan eksekusi Q1, Q2, Q3, Q6, Q4,
+lalu Q5. Saat kedua DBMS dipilih, runner menjalankan setiap query berpasangan
+(PostgreSQL kemudian Memgraph) sebelum beralih ke query berikutnya.
+Gunakan `--memgraph-first` pada sebagian percobaan untuk menyeimbangkan urutan
+DBMS, misalnya bergantian di antara empat percobaan.
+
+Q3 mengukur Jaccard kesamaan himpunan penjual dari pesanan berstatus selesai
+dan menggunakan `id_pengguna` sebagai pengurutan sekunder ketika skor seri.
+
+Pemeriksaan rencana eksekusi disimpan terpisah dan tidak masuk ke waktu
+percobaan:
+
+```bash
+python benchmark/run_queries.py --plans-only --output-dir benchmark/results/outputs/plans
+```
+
+PostgreSQL memakai `EXPLAIN ANALYZE` dengan statistik buffer dan me-rollback
+hasil query tulis. Memgraph menjalankan `PROFILE` sebagai query auto-commit
+tunggal; query tulis di sana dapat mengubah data. Load ulang kedua DBMS setelah
+mengambil plan dan sebelum timed run. Schema PostgreSQL menambahkan indeks
+`pesanan(status_pesanan)` untuk kondisi filter pada Q4.
+
 ## Catatan verifikasi dan temuan
 
 1. Tag Memgraph dipakai: `memgraph/memgraph:2.18.0`.
@@ -83,4 +133,7 @@ python validation/validate.py --profile dev
 - Semua data generator deterministik menggunakan satu instance `random.Random(seed)`.
 - Generator akan gagal bila invariant `I1` sampai `I15` tidak terpenuhi.
 - `.env` dipakai untuk konfigurasi koneksi; file `.env` tidak disertakan di repo.
-- Reset Memgraph dilakukan melalui reinitialisasi schema in-memory dan penghapusan data akibat reset connect; ini sesuai pendekatan yang dijelaskan dalam spec.
+- Loader PostgreSQL menjalankan `postgres/schema.sql`, yang menghapus tabel proyek
+  sebelum membuat ulang schema dan memuat CSV. Loader Memgraph menjalankan
+  `memgraph/schema.cypher`, yang menghapus semua node dan relationship sebelum
+  memuat ulang data.
