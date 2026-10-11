@@ -48,3 +48,4 @@ CREATE INDEX ON pesanan(id_pembeli);
 CREATE INDEX ON pesanan(id_penjual);
 CREATE INDEX ON detail_pesanan(id_produk);
 CREATE INDEX ON produk_favorit(id_produk);
+CREATE INDEX ON pesanan(status_pesanan);
