@@ -1,0 +1,17 @@
+dev:
+  pengguna: 1000
+  produk: 5000
+  pesanan: 2000
+  produk_favorit: 10000
+
+medium:
+  pengguna: 100000
+  produk: 500000
+  pesanan: 200000
+  produk_favorit: 500000
+
+large:
+  pengguna: 500000
+  produk: 2500000
+  pesanan: 1000000
+  produk_favorit: 5000000
