@@ -1,6 +1,6 @@
 # Gayang Data Project
 
-Implementasi lingkungan PostgreSQL + Memgraph sesuai kebutuhan proyek.
+Implementasi lingkungan PostgreSQL + Memgraph sesuai kebutuhan proyek Gayang (e-commerce sederhana). Dataset dihasilkan secara deterministik, memuat ke kedua DBMS, dan menjalankan query berpasangan Q1–Q6. Hasil query disimpan ke CSV dan laporan waktu. 
 
 ## Versi yang dipakai
 
@@ -116,24 +116,3 @@ hasil query tulis. Memgraph menjalankan `PROFILE` sebagai query auto-commit
 tunggal; query tulis di sana dapat mengubah data. Load ulang kedua DBMS setelah
 mengambil plan dan sebelum timed run. Schema PostgreSQL menambahkan indeks
 `pesanan(status_pesanan)` untuk kondisi filter pada Q4.
-
-## Catatan verifikasi dan temuan
-
-1. Tag Memgraph dipakai: `memgraph/memgraph:2.18.0`.
-   - Volume data dipasang di `/var/lib/memgraph` pada container.
-   - `docker compose` menjalankan container utama dengan Bolt port 7687 dan port 7444. Memgraph Lab tersedia pada port 3000 jika profile `lab` diaktifkan.
-2. Constraint unik Memgraph: untuk versi dan sintaks yang dipakai, constraint unik belum ditambahkan ke `schema.cypher` karena kompatibilitas versi dapat bervariasi. Daftar index dibuat tetap; jika versi Memgraph yang digunakan mendukung `CREATE CONSTRAINT`, dapat ditambahkan tanpa mengubah model data.
-3. Tipe `date` Memgraph: `date(r.tanggal_daftar)` dan `date(r.tanggal_pesanan)` dipakai saat load. Fungsi ini sesuai pola tanggal ISO `YYYY-MM-DD` dan kompatibel untuk perbandingan serta extract tanggal.
-4. `shortestPath` / pola relationship panjang variabel: belum diuji pada implementasi ini; perlu diverifikasi jika query terkait digunakan.
-5. Estimasi RAM Memgraph untuk profile medium/large: belum diverifikasi secara eksplisit di runtime. Disarankan mengecek dokumentasi storage Memgraph untuk profil target sebelum menjalankan `medium` atau `large` di mesin yang terbatas.
-6. `COPY` PostgreSQL via `psycopg` versi 3: didukung. Loader menggunakan `cursor.copy(..., FORMAT csv, HEADER true)` dan mengirim data secara streaming.
-
-## Catatan implementasi
-
-- Semua data generator deterministik menggunakan satu instance `random.Random(seed)`.
-- Generator akan gagal bila invariant `I1` sampai `I15` tidak terpenuhi.
-- `.env` dipakai untuk konfigurasi koneksi; file `.env` tidak disertakan di repo.
-- Loader PostgreSQL menjalankan `postgres/schema.sql`, yang menghapus tabel proyek
-  sebelum membuat ulang schema dan memuat CSV. Loader Memgraph menjalankan
-  `memgraph/schema.cypher`, yang menghapus semua node dan relationship sebelum
-  memuat ulang data.
